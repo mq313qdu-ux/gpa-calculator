@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import "./App.css";
 import {
   Bone,
@@ -11,6 +11,8 @@ import {
   ChevronDown,
   Sparkles,
   Hourglass,
+  X,
+  PencilLine,
 } from "lucide-react";
 
 /* ============================================================================
@@ -25,12 +27,12 @@ import {
 
 // كل تقدير يقابله متوسط درجات ثابت يُستخدم داخلياً فقط في الحساب (لا يُعرض للطالب)
 const GRADE_OPTIONS = [
-  { value: "", label: "اختر التقدير" },
-  { value: 95, label: "ممتاز" },
-  { value: 85, label: "جيد جداً" },
-  { value: 75, label: "جيد" },
-  { value: 65, label: "متوسط" },
-  { value: 55, label: "مقبول" },
+  { value: "", label: "اختر التقدير", tone: "empty" },
+  { value: 95, label: "ممتاز", tone: "excellent" },
+  { value: 85, label: "جيد جداً", tone: "vgood" },
+  { value: 75, label: "جيد", tone: "good" },
+  { value: 65, label: "متوسط", tone: "medium" },
+  { value: 55, label: "مقبول", tone: "pass" },
 ];
 
 // نطاقات تحويل المعدل النهائي إلى تقدير لفظي
@@ -177,6 +179,9 @@ export default function GpaCalculatorApp() {
   const [resultByStage, setResultByStage] = useState({});
   const [missingIds, setMissingIds] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
+  const [showResult, setShowResult] = useState(false);
+  const [openGradePickerId, setOpenGradePickerId] = useState(null);
+  const closeResultRef = useRef(null);
 
   const stage = CURRICULUM[selectedStageKey];
   const gradesById = gradesByStage[selectedStageKey] || {};
@@ -187,6 +192,8 @@ export default function GpaCalculatorApp() {
     setSelectedStageKey(key);
     setErrorMessage("");
     setMissingIds([]);
+    setShowResult(false);
+    setOpenGradePickerId(null);
   }, []);
 
   const handleGradeChange = useCallback(
@@ -196,6 +203,7 @@ export default function GpaCalculatorApp() {
         [selectedStageKey]: { ...prev[selectedStageKey], [subjectId]: value },
       }));
       setMissingIds((prev) => prev.filter((id) => id !== subjectId));
+      setOpenGradePickerId(null);
       if (errorMessage) setErrorMessage("");
     },
     [selectedStageKey, errorMessage]
@@ -209,6 +217,7 @@ export default function GpaCalculatorApp() {
         `يرجى اختيار التقدير لجميع المواد قبل الحساب (${missing.length} مادة متبقية).`
       );
       setResultByStage((prev) => ({ ...prev, [selectedStageKey]: null }));
+      setShowResult(false);
       return;
     }
     const gpa = calculateStageGPA(stage, gradesById);
@@ -222,6 +231,7 @@ export default function GpaCalculatorApp() {
       ...prev,
       [selectedStageKey]: { gpa, ...info, weightPercent, contribution },
     }));
+    setShowResult(true);
   }, [stage, gradesById, selectedStageKey]);
 
   const handleReset = useCallback(() => {
@@ -229,7 +239,29 @@ export default function GpaCalculatorApp() {
     setResultByStage((prev) => ({ ...prev, [selectedStageKey]: null }));
     setMissingIds([]);
     setErrorMessage("");
+    setShowResult(false);
+    setOpenGradePickerId(null);
   }, [selectedStageKey]);
+
+  const handleCloseResult = useCallback(() => setShowResult(false), []);
+
+  useEffect(() => {
+    if (!showResult) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeResultRef.current?.focus();
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") handleCloseResult();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showResult, handleCloseResult]);
 
   const isStageEmpty = stageSubjects.length === 0;
   const completedSubjects = stageSubjects.filter((subject) => gradesById[subject.id]).length;
@@ -340,105 +372,90 @@ export default function GpaCalculatorApp() {
                     <span className="subject-count">{course.subjects.length} مواد</span>
                   </div>
 
-                  {course.subjects.map((subject) => (
-                    <div
-                      className={`subject-row ${missingIds.includes(subject.id) ? "missing" : ""} ${gradesById[subject.id] ? "has-value" : ""}`}
-                      key={subject.id}
-                    >
-                      <div className="subject-copy">
-                        <span className="status-dot" aria-hidden="true" />
-                        <span className="subject-name">{subject.name}</span>
-                        <span className="units-badge">{subject.units} وحدات</span>
-                      </div>
-                      <div className="select-wrap">
-                        <select
-                          value={gradesById[subject.id] || ""}
-                          onChange={(e) => handleGradeChange(subject.id, e.target.value)}
-                          aria-label={`التقدير في مادة ${subject.name}`}
+                  {course.subjects.map((subject) => {
+                    const selectedGrade = GRADE_OPTIONS.find(
+                      (option) => String(option.value) === String(gradesById[subject.id] || "")
+                    ) || GRADE_OPTIONS[0];
+
+                    return (
+                      <div
+                        className={`subject-row ${missingIds.includes(subject.id) ? "missing" : ""} ${gradesById[subject.id] ? "has-value" : ""}`}
+                        key={subject.id}
+                      >
+                        <div className="subject-copy">
+                          <span className="status-dot" aria-hidden="true" />
+                          <span className="subject-name">{subject.name}</span>
+                        </div>
+
+                        <div
+                          className="grade-picker"
+                          data-tone={selectedGrade.tone}
+                          onBlur={(event) => {
+                            if (!event.currentTarget.contains(event.relatedTarget)) {
+                              setOpenGradePickerId(null);
+                            }
+                          }}
                         >
-                          {GRADE_OPTIONS.map((opt) => (
-                            <option value={opt.value} key={opt.label}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown size={16} className="chevron" aria-hidden="true" />
+                          <button
+                            type="button"
+                            className="grade-trigger"
+                            aria-haspopup="listbox"
+                            aria-expanded={openGradePickerId === subject.id}
+                            aria-label={`التقدير في مادة ${subject.name}: ${selectedGrade.label}`}
+                            onClick={() => setOpenGradePickerId((current) => current === subject.id ? null : subject.id)}
+                          >
+                            <span className="grade-color" aria-hidden="true" />
+                            <span>{selectedGrade.label}</span>
+                            <ChevronDown size={16} className="chevron" aria-hidden="true" />
+                          </button>
+
+                          {openGradePickerId === subject.id && (
+                            <div className="grade-menu" role="listbox" aria-label={`خيارات التقدير لمادة ${subject.name}`}>
+                              {GRADE_OPTIONS.slice(1).map((option, optionIndex) => (
+                                <button
+                                  type="button"
+                                  role="option"
+                                  aria-selected={String(option.value) === String(selectedGrade.value)}
+                                  className="grade-option"
+                                  data-tone={option.tone}
+                                  key={option.value}
+                                  onClick={() => handleGradeChange(subject.id, String(option.value))}
+                                >
+                                  <span className="grade-option-dot" aria-hidden="true" />
+                                  <span>{option.label}</span>
+                                  <i className="grade-option-meter" style={{ "--grade-level": 5 - optionIndex }} aria-hidden="true" />
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </section>
               ))}
-            </main>
 
-            <aside className="summary-column">
-              <div className="summary-sticky">
-                <section className="progress-card">
+              <section className="calculation-panel" aria-label="حساب المعدل">
+                <div className="calculation-copy">
                   <div className="progress-card-head">
-                    <span>اكتمال البيانات</span>
+                    <span>جاهزية الحساب</span>
                     <strong>{completionPercent}٪</strong>
                   </div>
                   <div className="progress-track" aria-hidden="true"><i style={{ width: `${completionPercent}%` }} /></div>
                   <p><b>{completedSubjects}</b> من أصل <b>{stageSubjects.length}</b> مادة تم اختيار تقديرها</p>
-                  <div className="actions">
-                    <button className="btn btn-primary" onClick={handleCalculate}>
-                      <Calculator size={19} strokeWidth={2.2} aria-hidden="true" />
-                      <span>احسب المعدل</span>
-                    </button>
-                    <button className="btn btn-secondary" onClick={handleReset}>
-                      <RotateCcw size={17} strokeWidth={2.2} aria-hidden="true" />
-                      <span>إعادة تعيين</span>
-                    </button>
-                  </div>
-                </section>
-
-                {result && (
-                  <section
-                    className="result-card"
-                    aria-live="polite"
-                    style={{ "--gauge-pct": Math.min(result.gpa, 100), "--gauge-color": `var(--tone-${result.tone})` }}
-                  >
-                    <div className="result-topline">
-                      <span>النتيجة النهائية</span>
-                      <CheckCircle2 size={18} strokeWidth={2} aria-hidden="true" />
-                    </div>
-                    <div className="gauge">
-                      <div className="gauge-inner">
-                        <strong>{result.gpa.toFixed(2)}</strong>
-                        <small>من 100</small>
-                      </div>
-                    </div>
-                    <div className="result-title">معدل {stage.label}</div>
-                    <div
-                      className="result-label"
-                      style={{
-                        color: `var(--tone-${result.tone})`,
-                        background: `color-mix(in srgb, var(--tone-${result.tone}) 15%, transparent)`,
-                        borderColor: `color-mix(in srgb, var(--tone-${result.tone}) 45%, transparent)`,
-                      }}
-                    >
-                      <Sparkles size={14} aria-hidden="true" />
-                      {result.label}
-                    </div>
-                    <div className="contribution-box">
-                      <div className="contribution-row">
-                        <span>المساهمة التراكمية<br /><small>{result.weightPercent}٪ لـ{stage.label}</small></span>
-                        <strong>{result.contribution.toFixed(3)}</strong>
-                      </div>
-                      <p className="contribution-note">
-                        أي أن معدل {stage.label} ({result.gpa.toFixed(2)}) يُحتسب ×{STAGE_WEIGHTS[stage.order]} ثم يُقسم على 10 ضمن معادلة المعدل التراكمي النهائي.
-                      </p>
-                    </div>
-                  </section>
-                )}
-
-                {!result && (
-                  <div className="calculation-note">
-                    <span className="note-icon"><Calculator size={18} strokeWidth={2} aria-hidden="true" /></span>
-                    <p>بعد اختيار جميع التقديرات اضغط <b>احسب المعدل</b> وستظهر النتيجة هنا.</p>
-                  </div>
-                )}
-              </div>
-            </aside>
+                </div>
+                <div className="actions">
+                  <button className="btn btn-primary" onClick={handleCalculate}>
+                    <Calculator size={20} strokeWidth={2.2} aria-hidden="true" />
+                    <span>احسب المعدل</span>
+                  </button>
+                  <button className="btn btn-secondary" onClick={handleReset}>
+                    <RotateCcw size={18} strokeWidth={2.2} aria-hidden="true" />
+                    <span>إعادة تعيين</span>
+                  </button>
+                </div>
+              </section>
+            </main>
           </div>
         )}
 
@@ -447,12 +464,87 @@ export default function GpaCalculatorApp() {
           <div className="signature-wrap">
             <div>
               <span className="signature-label">إعداد الطالب</span>
-              <strong>مقتدى الكناني</strong>
             </div>
             <img src={SIGNATURE_LOGO} alt="توقيع مقتدى الكناني" className="signature-img" />
           </div>
         </footer>
       </div>
+
+      {showResult && result && (
+        <div className="result-overlay" role="presentation" onMouseDown={handleCloseResult}>
+          <section
+            className="result-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="result-dialog-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="dialog-close"
+              aria-label="إغلاق النتيجة"
+              onClick={handleCloseResult}
+              ref={closeResultRef}
+            >
+              <X size={20} strokeWidth={2.2} aria-hidden="true" />
+            </button>
+
+            <div className="result-topline">
+              <span id="result-dialog-title">النتيجة النهائية</span>
+              <CheckCircle2 size={19} strokeWidth={2} aria-hidden="true" />
+            </div>
+
+            <div className="result-gauge" aria-label={`المعدل ${result.gpa.toFixed(2)} من 100`}>
+              <svg viewBox="0 0 120 120" aria-hidden="true">
+                <circle className="gauge-track" cx="60" cy="60" r="48" />
+                <circle
+                  className="gauge-progress"
+                  cx="60"
+                  cy="60"
+                  r="48"
+                  pathLength="100"
+                  style={{
+                    "--score-offset": 100 - Math.min(result.gpa, 100),
+                    "--gauge-color": `var(--tone-${result.tone})`,
+                  }}
+                />
+              </svg>
+              <div className="gauge-inner">
+                <strong>{result.gpa.toFixed(2)}</strong>
+                <small>من 100</small>
+              </div>
+            </div>
+
+            <div className="result-title">معدل {stage.label}</div>
+            <div
+              className="result-label"
+              style={{
+                color: `var(--tone-${result.tone})`,
+                background: `color-mix(in srgb, var(--tone-${result.tone}) 15%, transparent)`,
+                borderColor: `color-mix(in srgb, var(--tone-${result.tone}) 45%, transparent)`,
+              }}
+            >
+              <Sparkles size={14} aria-hidden="true" />
+              {result.label}
+            </div>
+
+            <div className="contribution-box">
+              <div className="contribution-row">
+                <span>المساهمة التراكمية<br /><small>{result.weightPercent}٪ لـ{stage.label}</small></span>
+                <strong>{result.contribution.toFixed(3)}</strong>
+              </div>
+              <p className="contribution-note">
+                أي أن معدل {stage.label} ({result.gpa.toFixed(2)}) يُحتسب ×{STAGE_WEIGHTS[stage.order]} ثم يُقسم على 10 ضمن معادلة المعدل التراكمي النهائي.
+              </p>
+            </div>
+
+            <button type="button" className="edit-grades-btn" onClick={handleCloseResult}>
+              <PencilLine size={17} strokeWidth={2} aria-hidden="true" />
+              تعديل التقديرات
+            </button>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

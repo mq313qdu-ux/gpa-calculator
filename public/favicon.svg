@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">حاسبة المعدل التراكمي — قسم تقنيات الأشعة</title>
+  <rect width="64" height="64" rx="17" fill="#181b1a"/>
+  <path d="M17 43A22 22 0 1 1 47 43" fill="none" stroke="#d8ff57" stroke-width="7" stroke-linecap="round"/>
+  <path d="M32 18v27" stroke="#5364ff" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="32" cy="45" r="5" fill="#ff7048" stroke="#181b1a" stroke-width="2"/>
+  <circle cx="17" cy="43" r="3" fill="#fffef9"/>
+</svg>
