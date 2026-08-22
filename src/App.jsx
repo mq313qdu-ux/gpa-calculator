@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback } from "react";
+import "./App.css";
 import {
   Bone,
   GraduationCap,
@@ -231,472 +232,124 @@ export default function GpaCalculatorApp() {
   }, [selectedStageKey]);
 
   const isStageEmpty = stageSubjects.length === 0;
+  const completedSubjects = stageSubjects.filter((subject) => gradesById[subject.id]).length;
+  const completionPercent = stageSubjects.length
+    ? Math.round((completedSubjects / stageSubjects.length) * 100)
+    : 0;
 
   return (
     <div className="app-root" dir="rtl" lang="ar">
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;800;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap');
-
-        .app-root {
-          --bg-deep: #0a1520;
-          --bg-panel: #10202f;
-          --bg-panel-alt: #16293a;
-          --bg-field: #0d1c29;
-          --accent-cyan: #5fd3e8;
-          --accent-cyan-soft: rgba(95, 211, 232, 0.14);
-          --accent-amber: #f0a947;
-          --accent-amber-soft: rgba(240, 169, 71, 0.16);
-          --text-primary: #eaf4f7;
-          --text-muted: #86a0b1;
-          --text-faint: #56707f;
-          --border-soft: rgba(95, 211, 232, 0.14);
-          --border-strong: rgba(95, 211, 232, 0.32);
-          --danger: #e8735f;
-          --danger-soft: rgba(232, 115, 95, 0.14);
-          --tone-fail: #e8735f;
-          --tone-pass: #e0a45f;
-          --tone-medium: #e8cb5f;
-          --tone-good: #8fd16b;
-          --tone-vgood: #5fd3a8;
-          --tone-excellent: #5fd3e8;
-
-          font-family: 'IBM Plex Sans Arabic', 'Tajawal', sans-serif;
-          background: var(--bg-deep);
-          color: var(--text-primary);
-          min-height: 100vh;
-          width: 100%;
-          box-sizing: border-box;
-          padding: 28px 16px 64px;
-          background-image:
-            radial-gradient(ellipse 900px 500px at 50% -10%, rgba(95,211,232,0.10), transparent 60%),
-            repeating-linear-gradient(180deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px);
-        }
-        .app-root *, .app-root *::before, .app-root *::after { box-sizing: border-box; }
-
-        .shell { max-width: 880px; margin: 0 auto; }
-
-        /* ---------- Hero / lightbox ---------- */
-        .hero {
-          position: relative;
-          border-radius: 20px;
-          padding: 38px 28px 32px;
-          background: linear-gradient(180deg, #0e2130 0%, #0a1a27 100%);
-          border: 1px solid var(--border-soft);
-          overflow: hidden;
-          text-align: center;
-          box-shadow: 0 0 0 1px rgba(0,0,0,0.2), 0 20px 50px -20px rgba(0,0,0,0.6);
-        }
-        .hero::before {
-          content: "";
-          position: absolute;
-          inset: -2px;
-          background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
-          opacity: 0.5;
-          height: 2px;
-          top: 0;
-          animation: scan 4.5s linear infinite;
-        }
-        @keyframes scan {
-          0% { transform: translateY(0); opacity: 0; }
-          8% { opacity: 0.65; }
-          50% { opacity: 0.35; }
-          92% { opacity: 0.65; }
-          100% { transform: translateY(230px); opacity: 0; }
-        }
-        .hero-icon {
-          width: 54px; height: 54px;
-          margin: 0 auto 16px;
-          display: flex; align-items: center; justify-content: center;
-          border-radius: 16px;
-          background: var(--accent-cyan-soft);
-          border: 1px solid var(--border-strong);
-          color: var(--accent-cyan);
-        }
-        .hero-eyebrow {
-          font-size: 13px;
-          letter-spacing: 0.02em;
-          color: var(--accent-cyan);
-          font-weight: 600;
-          margin-bottom: 10px;
-        }
-        .hero h1 {
-          font-family: 'Tajawal', sans-serif;
-          font-weight: 900;
-          font-size: clamp(28px, 5vw, 42px);
-          margin: 0 0 8px;
-          letter-spacing: -0.01em;
-        }
-        .hero p {
-          color: var(--text-muted);
-          font-size: 15px;
-          margin: 0;
-        }
-
-        /* ---------- Stage tabs ---------- */
-        .stage-tabs {
-          display: flex;
-          gap: 10px;
-          margin: 26px 0 22px;
-          flex-wrap: wrap;
-        }
-        .stage-tab {
-          flex: 1 1 160px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          padding: 14px 16px;
-          border-radius: 14px;
-          border: 1px solid var(--border-soft);
-          background: var(--bg-panel);
-          color: var(--text-muted);
-          font-family: inherit;
-          font-weight: 600;
-          font-size: 14.5px;
-          cursor: pointer;
-          transition: border-color .2s ease, color .2s ease, background .2s ease, transform .15s ease;
-        }
-        .stage-tab:hover { border-color: var(--border-strong); color: var(--text-primary); transform: translateY(-1px); }
-        .stage-tab.active {
-          background: var(--accent-cyan-soft);
-          border-color: var(--accent-cyan);
-          color: var(--accent-cyan);
-          box-shadow: 0 0 0 1px var(--accent-cyan) inset;
-        }
-
-        /* ---------- Course card ---------- */
-        .course-card {
-          background: var(--bg-panel);
-          border: 1px solid var(--border-soft);
-          border-radius: 18px;
-          padding: 22px;
-          margin-bottom: 18px;
-        }
-        .course-head {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 16px;
-          padding-bottom: 14px;
-          border-bottom: 1px dashed var(--border-soft);
-        }
-        .course-title {
-          display: flex; align-items: center; gap: 10px;
-          font-family: 'Tajawal', sans-serif;
-          font-weight: 700;
-          font-size: 17px;
-        }
-        .course-title .icon-chip {
-          width: 30px; height: 30px;
-          border-radius: 9px;
-          background: var(--accent-amber-soft);
-          color: var(--accent-amber);
-          display: flex; align-items: center; justify-content: center;
-        }
-        .subject-row {
-          display: grid;
-          grid-template-columns: 1fr 168px;
-          align-items: center;
-          gap: 14px;
-          padding: 12px 4px;
-          border-radius: 12px;
-          transition: background .2s ease;
-        }
-        .subject-row + .subject-row { border-top: 1px solid rgba(255,255,255,0.04); }
-        .subject-row.missing {
-          background: var(--danger-soft);
-          box-shadow: 0 0 0 1px var(--danger) inset;
-          border-radius: 12px;
-        }
-        .subject-name {
-          font-size: 14.5px;
-          font-weight: 500;
-          color: var(--text-primary);
-        }
-        .select-wrap { position: relative; }
-        .select-wrap select {
-          width: 100%;
-          appearance: none;
-          -webkit-appearance: none;
-          font-family: inherit;
-          font-size: 14px;
-          font-weight: 500;
-          color: var(--text-primary);
-          background: var(--bg-field);
-          border: 1px solid var(--border-soft);
-          border-radius: 10px;
-          padding: 10px 34px 10px 12px;
-          cursor: pointer;
-          transition: border-color .2s ease;
-        }
-        .select-wrap select:hover { border-color: var(--border-strong); }
-        .select-wrap select:focus { outline: none; border-color: var(--accent-cyan); box-shadow: 0 0 0 3px var(--accent-cyan-soft); }
-        .select-wrap .chevron {
-          position: absolute;
-          inset-inline-start: 10px;
-          top: 50%;
-          transform: translateY(-50%);
-          pointer-events: none;
-          color: var(--text-faint);
-        }
-
-        /* ---------- Empty stage ---------- */
-        .empty-stage {
-          text-align: center;
-          padding: 56px 24px;
-          background: var(--bg-panel);
-          border: 1px dashed var(--border-soft);
-          border-radius: 18px;
-          color: var(--text-muted);
-        }
-        .empty-stage .icon-chip {
-          width: 46px; height: 46px;
-          margin: 0 auto 14px;
-          border-radius: 13px;
-          background: var(--accent-amber-soft);
-          color: var(--accent-amber);
-          display: flex; align-items: center; justify-content: center;
-        }
-        .empty-stage h3 { font-family: 'Tajawal', sans-serif; color: var(--text-primary); margin: 0 0 6px; font-size: 17px; }
-        .empty-stage p { margin: 0; font-size: 13.5px; max-width: 380px; margin-inline: auto; }
-
-        /* ---------- Error banner ---------- */
-        .error-banner {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          background: var(--danger-soft);
-          border: 1px solid var(--danger);
-          color: #ffd4cb;
-          padding: 13px 16px;
-          border-radius: 12px;
-          font-size: 13.5px;
-          margin-bottom: 18px;
-        }
-
-        /* ---------- Actions ---------- */
-        .actions {
-          display: flex;
-          gap: 12px;
-          margin-top: 4px;
-        }
-        .btn {
-          flex: 1;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          font-family: 'Tajawal', sans-serif;
-          font-weight: 700;
-          font-size: 15px;
-          padding: 14px 18px;
-          border-radius: 13px;
-          border: none;
-          cursor: pointer;
-          transition: transform .15s ease, box-shadow .2s ease, opacity .2s ease;
-        }
-        .btn:active { transform: scale(0.98); }
-        .btn-primary {
-          background: linear-gradient(180deg, #f5b662, var(--accent-amber));
-          color: #201202;
-          box-shadow: 0 10px 24px -10px rgba(240,169,71,0.55);
-        }
-        .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
-        .btn-secondary {
-          background: var(--bg-panel-alt);
-          color: var(--text-muted);
-          border: 1px solid var(--border-soft);
-          flex: 0 0 auto;
-          min-width: 150px;
-        }
-        .btn-secondary:hover { color: var(--text-primary); border-color: var(--border-strong); }
-
-        /* ---------- Result ---------- */
-        .result-card {
-          margin-top: 26px;
-          background: linear-gradient(180deg, #0e2130, #0a1a27);
-          border: 1px solid var(--border-strong);
-          border-radius: 20px;
-          padding: 30px 24px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          text-align: center;
-          gap: 4px;
-          animation: rise .45s cubic-bezier(.2,.8,.2,1);
-        }
-        @keyframes rise {
-          from { opacity: 0; transform: translateY(14px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .gauge {
-          width: 148px; height: 148px;
-          border-radius: 50%;
-          display: flex; align-items: center; justify-content: center;
-          margin-bottom: 14px;
-          position: relative;
-        }
-        .gauge::before {
-          content: "";
-          position: absolute; inset: 0;
-          border-radius: 50%;
-          background: conic-gradient(var(--gauge-color) calc(var(--gauge-pct) * 1%), rgba(255,255,255,0.06) 0);
-          -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 11px));
-                  mask: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 11px));
-        }
-        .gauge-inner {
-          position: relative;
-          font-family: 'Tajawal', sans-serif;
-          font-weight: 900;
-          font-size: 30px;
-          color: var(--text-primary);
-        }
-        .result-label {
-          font-family: 'Tajawal', sans-serif;
-          font-weight: 800;
-          font-size: 15px;
-          padding: 6px 18px;
-          border-radius: 999px;
-          margin-top: 4px;
-        }
-        .result-title {
-          color: var(--text-muted);
-          font-size: 13.5px;
-          margin-bottom: 2px;
-        }
-        .contribution-box {
-          margin-top: 18px;
-          padding: 14px 16px;
-          width: 100%;
-          background: var(--bg-field);
-          border: 1px solid var(--border-soft);
-          border-radius: 13px;
-          text-align: start;
-        }
-        .contribution-row {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-          font-size: 12.5px;
-          color: var(--text-muted);
-        }
-        .contribution-row strong {
-          font-family: 'Tajawal', sans-serif;
-          font-size: 17px;
-          color: var(--accent-cyan);
-          white-space: nowrap;
-        }
-        .contribution-note {
-          margin: 8px 0 0;
-          font-size: 11.5px;
-          line-height: 1.6;
-          color: var(--text-faint);
-        }
-
-        .site-footer {
-          text-align: center;
-          margin-top: 34px;
-          padding-top: 22px;
-          border-top: 1px solid var(--border-soft);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 6px;
-        }
-        .signature-label {
-          font-size: 11.5px;
-          color: var(--text-faint);
-          letter-spacing: 0.06em;
-        }
-        .signature-img {
-          width: 130px;
-          height: auto;
-          opacity: 0.92;
-          filter: drop-shadow(0 0 14px rgba(95, 211, 232, 0.28));
-          transition: opacity .2s ease, filter .2s ease;
-        }
-        .signature-img:hover {
-          opacity: 1;
-          filter: drop-shadow(0 0 20px rgba(95, 211, 232, 0.45));
-        }
-
-        @media (max-width: 520px) {
-          .subject-row { grid-template-columns: 1fr; row-gap: 8px; }
-          .select-wrap { width: 100%; }
-          .actions { flex-direction: column; }
-          .btn-secondary { min-width: 0; }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .hero::before { animation: none; display: none; }
-          .result-card { animation: none; }
-        }
-      `}</style>
-
       <div className="shell">
-        {/* -------- Hero -------- */}
-        <header className="hero">
-          <div className="hero-icon">
-            <Bone size={26} strokeWidth={1.8} />
+        <div className="topbar">
+          <div className="brand-lockup">
+            <span className="brand-mark" aria-hidden="true">
+              <Bone size={20} strokeWidth={2.2} />
+            </span>
+            <span className="brand-copy">
+              <b>BEAM</b>
+              <small>قسم تقنيات الأشعة</small>
+            </span>
           </div>
-          <div className="hero-eyebrow">قسم تقنيات الأشعة</div>
-          <h1>حاسبة المعدل التراكمي</h1>
-          <p>اختر المرحلة الدراسية، ثم حدّد تقديرك في كل مادة لاحتساب معدلك بدقة</p>
+          <span className="edition-tag">إصدار الطلبة · 2026</span>
+        </div>
+
+        <header className="hero-grid">
+          <div className="hero-main">
+            <div className="hero-orbit" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </div>
+            <div className="hero-content">
+              <div className="hero-eyebrow"><span></span> حاسبة أكاديمية دقيقة</div>
+              <h1>حاسبة<br /><em>المعدل التراكمي</em></h1>
+              <p>اختر المرحلة الدراسية، ثم حدّد تقديرك في كل مادة لاحتساب معدلك بدقة</p>
+            </div>
+          </div>
+
+          <div className="hero-side" aria-label={`تقدم ${stage.label}`}>
+            <span className="stage-kicker">المرحلة الحالية</span>
+            <strong className="stage-number">0{stage.order}</strong>
+            <div className="stage-side-bottom">
+              <span>{stage.label}</span>
+              <div className="mini-progress"><i style={{ width: `${completionPercent}%` }} /></div>
+              <small>{completedSubjects} من {stageSubjects.length} مادة</small>
+            </div>
+          </div>
         </header>
 
-        {/* -------- Stage tabs -------- */}
-        <nav className="stage-tabs" role="tablist" aria-label="اختيار المرحلة الدراسية">
-          {STAGE_LIST.map(([key, s]) => (
-            <button
-              key={key}
-              role="tab"
-              aria-selected={selectedStageKey === key}
-              className={`stage-tab ${selectedStageKey === key ? "active" : ""}`}
-              onClick={() => handleSelectStage(key)}
-            >
-              <GraduationCap size={18} strokeWidth={2} />
-              {s.label}
-            </button>
-          ))}
-        </nav>
+        <section className="stage-picker">
+          <div className="section-intro">
+            <div>
+              <span className="section-index">01</span>
+              <h2>اختر المرحلة الدراسية</h2>
+            </div>
+            <p>كل مرحلة تحتفظ باختياراتها ونتيجتها بشكل مستقل</p>
+          </div>
+          <nav className="stage-tabs" role="tablist" aria-label="اختيار المرحلة الدراسية">
+            {STAGE_LIST.map(([key, s]) => (
+              <button
+                key={key}
+                role="tab"
+                aria-selected={selectedStageKey === key}
+                className={`stage-tab ${selectedStageKey === key ? "active" : ""}`}
+                onClick={() => handleSelectStage(key)}
+              >
+                <span className="tab-number">0{s.order}</span>
+                <span className="tab-label">
+                  <GraduationCap size={18} strokeWidth={2} aria-hidden="true" />
+                  {s.label}
+                </span>
+                <span className="tab-state">{selectedStageKey === key ? "محددة" : "اختيار"}</span>
+              </button>
+            ))}
+          </nav>
+        </section>
 
-        {/* -------- Content -------- */}
         {isStageEmpty ? (
           <div className="empty-stage">
             <div className="icon-chip">
-              <Hourglass size={22} strokeWidth={1.8} />
+              <Hourglass size={22} strokeWidth={1.8} aria-hidden="true" />
             </div>
             <h3>بيانات {stage.label} قيد الإضافة</h3>
             <p>سيتم تفعيل مواد هذه المرحلة قريباً. يمكنك حالياً احتساب معدل المرحلة الأولى.</p>
           </div>
         ) : (
-          <>
-            {errorMessage && (
-              <div className="error-banner">
-                <AlertCircle size={18} strokeWidth={2} />
-                <span>{errorMessage}</span>
+          <div className="calculator-layout">
+            <main className="courses-column">
+              <div className="section-intro courses-intro">
+                <div>
+                  <span className="section-index">02</span>
+                  <h2>أدخل تقديرات المواد</h2>
+                </div>
+                <p>{stageSubjects.length} مادة ضمن {Object.keys(stage.courses).length} كورسات</p>
               </div>
-            )}
 
-            {Object.entries(stage.courses).map(([courseKey, course]) => {
-              return (
+              {errorMessage && (
+                <div className="error-banner" role="alert">
+                  <span className="error-icon"><AlertCircle size={19} strokeWidth={2.2} aria-hidden="true" /></span>
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+
+              {Object.entries(stage.courses).map(([courseKey, course], courseIndex) => (
                 <section className="course-card" key={courseKey}>
                   <div className="course-head">
                     <div className="course-title">
-                      <span className="icon-chip">
-                        <BookOpen size={16} strokeWidth={2} />
-                      </span>
-                      {course.label}
+                      <span className="icon-chip"><BookOpen size={17} strokeWidth={2} aria-hidden="true" /></span>
+                      <div><small>الكورس 0{courseIndex + 1}</small><h3>{course.label}</h3></div>
                     </div>
+                    <span className="subject-count">{course.subjects.length} مواد</span>
                   </div>
 
                   {course.subjects.map((subject) => (
                     <div
-                      className={`subject-row ${missingIds.includes(subject.id) ? "missing" : ""}`}
+                      className={`subject-row ${missingIds.includes(subject.id) ? "missing" : ""} ${gradesById[subject.id] ? "has-value" : ""}`}
                       key={subject.id}
                     >
-                      <span className="subject-name">{subject.name}</span>
+                      <div className="subject-copy">
+                        <span className="status-dot" aria-hidden="true" />
+                        <span className="subject-name">{subject.name}</span>
+                        <span className="units-badge">{subject.units} وحدات</span>
+                      </div>
                       <div className="select-wrap">
                         <select
                           value={gradesById[subject.id] || ""}
@@ -709,62 +362,95 @@ export default function GpaCalculatorApp() {
                             </option>
                           ))}
                         </select>
-                        <ChevronDown size={15} className="chevron" />
+                        <ChevronDown size={16} className="chevron" aria-hidden="true" />
                       </div>
                     </div>
                   ))}
                 </section>
-              );
-            })}
+              ))}
+            </main>
 
-            <div className="actions">
-              <button className="btn btn-primary" onClick={handleCalculate}>
-                <Calculator size={18} strokeWidth={2.2} />
-                احسب المعدل
-              </button>
-              <button className="btn btn-secondary" onClick={handleReset}>
-                <RotateCcw size={17} strokeWidth={2.2} />
-                إعادة تعيين
-              </button>
-            </div>
-
-            {result && (
-              <div className="result-card" style={{ "--gauge-pct": Math.min(result.gpa, 100), "--gauge-color": `var(--tone-${result.tone})` }}>
-                <div className="result-title">معدل {stage.label}</div>
-                <div className="gauge">
-                  <div className="gauge-inner">{result.gpa.toFixed(2)}</div>
-                </div>
-                <div
-                  className="result-label"
-                  style={{
-                    color: `var(--tone-${result.tone})`,
-                    background: `color-mix(in srgb, var(--tone-${result.tone}) 16%, transparent)`,
-                    border: `1px solid var(--tone-${result.tone})`,
-                  }}
-                >
-                  <Sparkles size={13} style={{ display: "inline", verticalAlign: "-2px", marginLeft: 4 }} />
-                  {result.label}
-                </div>
-                <div className="contribution-box">
-                  <div className="contribution-row">
-                    <span>
-                      <CheckCircle2 size={13} style={{ display: "inline", verticalAlign: "-2px", marginLeft: 4 }} />
-                      مساهمتك في المعدل التراكمي ({result.weightPercent}٪ لـ{stage.label})
-                    </span>
-                    <strong>{result.contribution.toFixed(3)}</strong>
+            <aside className="summary-column">
+              <div className="summary-sticky">
+                <section className="progress-card">
+                  <div className="progress-card-head">
+                    <span>اكتمال البيانات</span>
+                    <strong>{completionPercent}٪</strong>
                   </div>
-                  <p className="contribution-note">
-                    أي أن معدل {stage.label} ({result.gpa.toFixed(2)}) يُحتسب ×{STAGE_WEIGHTS[stage.order]} ثم يُقسم على 10 ضمن معادلة المعدل التراكمي النهائي.
-                  </p>
-                </div>
+                  <div className="progress-track" aria-hidden="true"><i style={{ width: `${completionPercent}%` }} /></div>
+                  <p><b>{completedSubjects}</b> من أصل <b>{stageSubjects.length}</b> مادة تم اختيار تقديرها</p>
+                  <div className="actions">
+                    <button className="btn btn-primary" onClick={handleCalculate}>
+                      <Calculator size={19} strokeWidth={2.2} aria-hidden="true" />
+                      <span>احسب المعدل</span>
+                    </button>
+                    <button className="btn btn-secondary" onClick={handleReset}>
+                      <RotateCcw size={17} strokeWidth={2.2} aria-hidden="true" />
+                      <span>إعادة تعيين</span>
+                    </button>
+                  </div>
+                </section>
+
+                {result && (
+                  <section
+                    className="result-card"
+                    aria-live="polite"
+                    style={{ "--gauge-pct": Math.min(result.gpa, 100), "--gauge-color": `var(--tone-${result.tone})` }}
+                  >
+                    <div className="result-topline">
+                      <span>النتيجة النهائية</span>
+                      <CheckCircle2 size={18} strokeWidth={2} aria-hidden="true" />
+                    </div>
+                    <div className="gauge">
+                      <div className="gauge-inner">
+                        <strong>{result.gpa.toFixed(2)}</strong>
+                        <small>من 100</small>
+                      </div>
+                    </div>
+                    <div className="result-title">معدل {stage.label}</div>
+                    <div
+                      className="result-label"
+                      style={{
+                        color: `var(--tone-${result.tone})`,
+                        background: `color-mix(in srgb, var(--tone-${result.tone}) 15%, transparent)`,
+                        borderColor: `color-mix(in srgb, var(--tone-${result.tone}) 45%, transparent)`,
+                      }}
+                    >
+                      <Sparkles size={14} aria-hidden="true" />
+                      {result.label}
+                    </div>
+                    <div className="contribution-box">
+                      <div className="contribution-row">
+                        <span>المساهمة التراكمية<br /><small>{result.weightPercent}٪ لـ{stage.label}</small></span>
+                        <strong>{result.contribution.toFixed(3)}</strong>
+                      </div>
+                      <p className="contribution-note">
+                        أي أن معدل {stage.label} ({result.gpa.toFixed(2)}) يُحتسب ×{STAGE_WEIGHTS[stage.order]} ثم يُقسم على 10 ضمن معادلة المعدل التراكمي النهائي.
+                      </p>
+                    </div>
+                  </section>
+                )}
+
+                {!result && (
+                  <div className="calculation-note">
+                    <span className="note-icon"><Calculator size={18} strokeWidth={2} aria-hidden="true" /></span>
+                    <p>بعد اختيار جميع التقديرات اضغط <b>احسب المعدل</b> وستظهر النتيجة هنا.</p>
+                  </div>
+                )}
               </div>
-            )}
-          </>
+            </aside>
+          </div>
         )}
 
         <footer className="site-footer">
-          <div className="signature-label">إعداد الطالب</div>
-          <img src={SIGNATURE_LOGO} alt="توقيع مقتدى الكناني" className="signature-img" />
+          <div className="footer-line"><span>BEAM</span><i /></div>
+          <div className="signature-wrap">
+            <div>
+              <span className="signature-label">إعداد الطالب</span>
+              <strong>مقتدى الكناني</strong>
+            </div>
+            <img src={SIGNATURE_LOGO} alt="توقيع مقتدى الكناني" className="signature-img" />
+          </div>
         </footer>
       </div>
     </div>
